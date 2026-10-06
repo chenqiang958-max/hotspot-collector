@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>过滤词库管理</title>
+<style>
+  :root{
+    --bg:#f4f5fb; --card:#fff; --ink:#1a1c2e; --ink-soft:#6b6f8a; --ink-faint:#a0a3bd;
+    --primary:#5b5bd6; --primary-deep:#4747b0; --primary-soft:#eeeefb; --line:#ececf4;
+    --shadow:0 4px 20px rgba(40,42,80,0.06); --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC",sans-serif;
+    max-width:820px;margin:0 auto;padding:28px 22px 60px;color:var(--ink);background:var(--bg);line-height:1.6;}
+  h1{font-size:24px;font-weight:800;display:flex;align-items:center;gap:14px;margin:0 0 8px;}
+  .sub{color:var(--ink-soft);font-size:13px;margin-bottom:20px;}
+  a.back{font-size:13px;font-weight:600;color:var(--primary);text-decoration:none;background:var(--primary-soft);padding:6px 14px;border-radius:100px;}
+  .card{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  input[type=text],select{padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;}
+  button{border:0;border-radius:8px;font-size:13px;padding:8px 14px;cursor:pointer;}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-ghost{background:#eef2ff;color:var(--primary-deep);}
+  .word-row{display:flex;align-items:center;gap:10px;font-size:14px;padding:9px 4px;border-bottom:1px solid var(--line);}
+  .word-tag{font-weight:600;background:#fff0f0;color:#c62828;padding:2px 12px;border-radius:100px;}
+  .mt{font-size:11px;color:var(--ink-faint);background:#f2f2f7;padding:1px 8px;border-radius:100px;}
+  .del{color:#e6162d;cursor:pointer;font-size:12px;margin-left:auto;}
+  .empty{color:var(--ink-faint);padding:12px 0;}
+</style></head><body>
+  <h1>🚫 过滤词库管理 <a class="back" href="/">← 返回收集</a></h1>
+  <div class="sub">命中这里的词的内容不会被抓进来。默认「精确」=标题正好等于该词才拦（安全不误伤）；「包含」=标题里含该词就拦（强力但可能误杀，慎用）。<br>词库存在软件数据库里，刷新/重启不会丢；导出是额外备份，换电脑或重装时可导回。</div>
+
+  <div class="card">
+    <div class="row">
+      <input id="w" type="text" placeholder="要过滤的词，如：综合、论文、专栏" style="flex:1;min-width:200px;">
+      <select id="mt">
+        <option value="exact">精确（推荐）</option>
+        <option value="contains">包含（慎用）</option>
+      </select>
+      <button class="btn-primary" onclick="addWord()">加入过滤库</button>
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <a class="btn-ghost" href="/filter_words/export" style="text-decoration:none;padding:8px 14px;border-radius:8px;">📤 导出备份</a>
+      <button class="btn-ghost" onclick="document.getElementById('imp').click()">📥 导入</button>
+      <input id="imp" type="file" accept=".json" style="display:none;" onchange="importFile(this)">
+      <span style="color:var(--ink-faint);font-size:12px;">导入为追加，不会覆盖已有词</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <b style="font-size:14px;">当前过滤词（{{ words|length }} 个）</b>
+    {% if words %}
+      <div style="margin-top:10px;">
+      {% for w in words %}
+        <div class="word-row">
+          <span class="word-tag">{{ w.word }}</span>
+          <span class="mt">{{ '精确' if w.match_type == 'exact' else '包含' }}</span>
+          <span class="del" onclick="delWord({{ w.id }})">删除（恢复抓取）</span>
+        </div>
+      {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">过滤库是空的。上面加个词，或导入之前的备份。</div>
+    {% endif %}
+  </div>
+
+<script>
+  function addWord(){
+    var w=document.getElementById('w').value.trim();
+    var mt=document.getElementById('mt').value;
+    if(!w){alert('请输入词');return;}
+    fetch('/filter_words/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word:w,match_type:mt})})
+      .then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function delWord(id){
+    if(!confirm('从过滤库删除这个词？删除后它又能被正常抓取。'))return;
+    fetch('/filter_words/delete/'+id,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok) location.reload();});
+  }
+  function importFile(input){
+    if(!input.files.length)return;
+    var fd=new FormData(); fd.append('file', input.files[0]);
+    fetch('/filter_words/import',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+</script>
+</body></html>
