@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.env
+
+# App runtime data — never commit!
+data/
+*.db
+*.log
+.secret_key
+软件日志.txt
+
+# Generated activation codes — never commit!
+已生成的激活码.json
+激活码文档/
+codes_*.txt
+
+# Editors
+.vscode/
+.idea/
