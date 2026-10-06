@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>登录 - 热点收集器</title>
+<style>
+  :root{--bg:#f4f5fb;--card:#fff;--ink:#1a1c2e;--ink-soft:#6b6f8a;
+        --primary:#5b5bd6;--primary-deep:#4747b0;--line:#ececf4;--radius:14px;}
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC",sans-serif;
+       background:var(--bg);color:var(--ink);margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:var(--card);border-radius:20px;box-shadow:0 8px 40px rgba(40,42,80,.12);padding:40px 34px;max-width:400px;width:100%;text-align:center;}
+  h1{font-size:24px;font-weight:800;margin:0 0 8px;}
+  .sub{font-size:13px;color:var(--ink-soft);margin-bottom:26px;}
+  input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:var(--radius);font-size:16px;font-family:inherit;text-align:center;}
+  input:focus{outline:none;border-color:var(--primary);}
+  button{width:100%;margin-top:18px;padding:13px;border:none;border-radius:100px;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;}
+  button:hover{background:var(--primary-deep);}
+  .err{color:#e5484d;font-size:13px;margin-top:14px;min-height:18px;font-weight:600;}
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>🔥 热点收集器</h1>
+    <div class="sub">请输入密码进入</div>
+    <input type="password" id="pwd" placeholder="密码" autofocus onkeydown="if(event.key==='Enter')login()">
+    <div class="err" id="err"></div>
+    <button onclick="login()">进入</button>
+    <a href="/forgot" style="display:block;text-align:center;margin-top:14px;font-size:13px;color:#6b6f8a;text-decoration:none;">忘记密码？用激活码重置 →</a>
+  </div>
+<script>
+  function login(){
+    var pwd=document.getElementById('pwd').value;
+    var err=document.getElementById('err');
+    err.textContent='';
+    fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:pwd})})
+      .then(r=>r.json()).then(d=>{
+        if(d.ok){ window.location='/'; }
+        else{ err.textContent=d.msg||'密码不对'; document.getElementById('pwd').value=''; document.getElementById('pwd').focus(); }
+      });
+  }
+</script>
+</body>
+</html>
