@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>数据分析</title>
+<style>
+  :root{
+    --bg:#f4f5fb; --card:#fff; --ink:#1a1c2e; --ink-soft:#6b6f8a; --ink-faint:#a0a3bd;
+    --primary:#5b5bd6; --primary-deep:#4747b0; --primary-soft:#eeeefb; --accent:#ff7a59;
+    --line:#ececf4; --shadow:0 4px 20px rgba(40,42,80,0.06);
+    --weibo:#e6162d; --bilibili:#00a1d6; --zhihu:#0066ff; --xiaohongshu:#ff2442; --douyin:#161823; --other:#8a8fa8;
+    --radius-lg:20px; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC",sans-serif;
+    max-width:1000px;margin:0 auto;padding:28px 22px 60px;color:var(--ink);background:var(--bg);line-height:1.6;}
+  h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:14px;margin:0 0 22px;}
+  h2{font-size:17px;font-weight:700;color:var(--ink);margin:28px 0 14px;display:flex;align-items:center;gap:8px;}
+  a.back{font-size:13px;font-weight:600;color:var(--primary);text-decoration:none;background:var(--primary-soft);padding:6px 14px;border-radius:100px;transition:all .2s;}
+  a.back:hover{background:var(--primary);color:#fff;}
+  .card{background:var(--card);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow);}
+  .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
+  .stat-box{background:linear-gradient(135deg,#fff,#f7f8ff);padding:16px 22px;border-radius:var(--radius);text-align:center;box-shadow:var(--shadow);min-width:120px;}
+  .stat-num{font-size:28px;font-weight:800;color:var(--primary-deep);line-height:1.1;}
+  .stat-label{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .cross-item{background:var(--card);border-radius:var(--radius);padding:15px 18px;margin-bottom:11px;
+    border-left:4px solid var(--accent);box-shadow:var(--shadow);transition:all .2s;}
+  .cross-item:hover{box-shadow:0 8px 30px rgba(40,42,80,0.12);transform:translateY(-1px);}
+  .cross-title{font-weight:700;font-size:15.5px;margin-bottom:8px;}
+  .plat-badge{display:inline-block;padding:2px 10px;border-radius:100px;font-size:11px;color:#fff;font-weight:600;margin-right:5px;}
+  .badge-weibo{background:var(--weibo);} .badge-bilibili{background:var(--bilibili);} .badge-zhihu{background:var(--zhihu);} .badge-xiaohongshu{background:var(--xiaohongshu);} .badge-douyin{background:var(--douyin);} .badge-other{background:var(--other);}
+  .cross-meta{font-size:12px;color:var(--ink-faint);}
+  .cross-detail{font-size:12.5px;color:var(--ink-soft);margin-top:9px;padding-left:12px;border-left:2px solid var(--line);}
+  .cross-detail>div{padding:2px 0;}
+  .hit-item{font-size:13px;padding:6px 10px;background:var(--bg);border-radius:9px;margin:4px 0;}
+  .kw{background:#ffe0e0;color:#c62828;padding:1px 8px;border-radius:100px;font-size:11px;font-weight:700;margin-right:4px;}
+  .empty-note{color:var(--ink-faint);}
+  .stat-box.clickable{cursor:pointer;transition:all .18s;}
+  .stat-box.clickable:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(40,42,80,0.14);}
+  .cross-detail a, .hit-item a{color:var(--primary);text-decoration:none;}
+  .cross-detail a:hover, .hit-item a:hover{text-decoration:underline;}
+  h2{justify-content:flex-start;}
+  @media(max-width:600px){body{padding:16px 12px;}h1{font-size:21px;}.stat-box{min-width:90px;padding:12px 16px;}.stat-num{font-size:23px;}}
+</style></head><body>
+  <h1>📊 数据分析 <a class="back" href="/">← 返回收集</a></h1>
+
+  <div style="display:flex;align-items:center;gap:8px;margin:0 0 16px;flex-wrap:wrap;">
+    <span style="font-size:13px;color:#6b6f8a;font-weight:600;">分析范围：</span>
+    <a href="/analysis?range=today" style="text-decoration:none;padding:6px 14px;border-radius:100px;font-size:13px;font-weight:600;{% if date_range=='today' %}background:#5b5bd6;color:#fff;{% else %}background:#eceef7;color:#6b6f8a;{% endif %}">今天</a>
+    <a href="/analysis?range=3days" style="text-decoration:none;padding:6px 14px;border-radius:100px;font-size:13px;font-weight:600;{% if date_range=='3days' %}background:#5b5bd6;color:#fff;{% else %}background:#eceef7;color:#6b6f8a;{% endif %}">最近3天</a>
+    <a href="/analysis?range=7days" style="text-decoration:none;padding:6px 14px;border-radius:100px;font-size:13px;font-weight:600;{% if date_range=='7days' %}background:#5b5bd6;color:#fff;{% else %}background:#eceef7;color:#6b6f8a;{% endif %}">最近7天</a>
+    <a href="/analysis?range=all" style="text-decoration:none;padding:6px 14px;border-radius:100px;font-size:13px;font-weight:600;{% if date_range=='all' %}background:#5b5bd6;color:#fff;{% else %}background:#eceef7;color:#6b6f8a;{% endif %}">全部</a>
+    <span style="font-size:12px;color:#a0a3bd;">（已自动排除B站入站必刷等经典存档榜）</span>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-num">{{ summary.total }}</div><div class="stat-label">总条数</div></div>
+    <div class="stat-box"><div class="stat-num">+{{ summary.today_new }}</div><div class="stat-label">今日新增</div></div>
+    <div class="stat-box clickable" onclick="jumpTo('sec-cross')"><div class="stat-num">{{ summary.cross_count }}</div><div class="stat-label">跨平台话题 ▾</div></div>
+    <div class="stat-box clickable" onclick="jumpTo('sec-demand')"><div class="stat-num">{{ summary.demand_count }}</div><div class="stat-label">需求类内容 ▾</div></div>
+  </div>
+
+  <h2 id="sec-cross">🔥 跨平台热点话题（多个平台都在讨论，最值得关注）
+    <a class="back" style="margin-left:auto;" href="/analysis/export_cross">📥 导出表格</a>
+  </h2>
+  {% if cross %}
+    {% for g in cross %}
+    <div class="cross-item">
+      <div class="cross-title">{{ g.title }}</div>
+      <div>
+        {% for p in g.platforms %}<span class="plat-badge badge-{{ p }}">{{ platform_names.get(p, p) }}</span>{% endfor %}
+        <span class="cross-meta">在 {{ g.platform_count }} 个平台出现，共 {{ g.count }} 条{% if g.total_heat %}，总热度 {{ g.total_heat }}{% endif %}</span>
+      </div>
+      <div class="cross-detail">
+        {% for it in g.entries %}
+        <div>[{{ platform_names.get(it.platform, it.platform) }}·{{ it.category }}]
+          {% if it.url %}<a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.title }}</a>{% else %}{{ it.title }}{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card empty-note">暂时没有跨平台话题。多抓几个平台的数据后，这里会显示哪些话题在多个平台同时上榜。</div>
+  {% endif %}
+
+  {% if summary.today_hot %}
+  <h2>🆕 今日新冒出的热点（今天首次上榜，按热度排）
+    <a class="back" style="margin-left:auto;" href="/analysis/export_pool?pool=today">📥 导出</a>
+  </h2>
+  <div class="card">
+    {% for d in summary.today_hot %}
+    <div class="hit-item">[{{ platform_names.get(d.platform, d.platform) }}·{{ d.category }}]
+      {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}
+      {% if d.heat and d.heat > 0 %}<span style="color:#e6162d;font-size:11px;">🔥{{ '{:,}'.format(d.heat) }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if summary.watch_hits %}
+  <h2>🎯 监控词命中</h2>
+  <div class="card">
+    {% for h in summary.watch_hits %}
+    <div class="hit-item"><span class="kw">{{ h.keyword }}</span> [{{ h.platform }}]
+      {% if h.url %}<a href="{{ h.url }}" target="_blank" rel="noopener">{{ h.title }}</a>{% else %}{{ h.title }}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if summary.demand_top %}
+  <h2 id="sec-demand">💡 需求类内容（大家在求什么）
+    <a class="back" style="margin-left:auto;" href="/analysis/export_pool?pool=demand">📥 导出</a>
+  </h2>
+  <div class="card">
+    {% for d in summary.demand_top %}
+    <div class="hit-item">[{{ platform_names.get(d.platform, d.platform) }}]
+      {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if summary.question_top %}
+  <h2>❓ 疑问类选题（大家在问，天然好选题）
+    <a class="back" style="margin-left:auto;" href="/analysis/export_pool?pool=question">📥 导出</a>
+  </h2>
+  <div class="card">
+    {% for d in summary.question_top %}
+    <div class="hit-item">[{{ platform_names.get(d.platform, d.platform) }}]
+      {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if summary.reco_top %}
+  <h2>🛒 求推荐/求助（大家在求，对应测评带货教程）
+    <a class="back" style="margin-left:auto;" href="/analysis/export_pool?pool=reco">📥 导出</a>
+  </h2>
+  <div class="card">
+    {% for d in summary.reco_top %}
+    <div class="hit-item">[{{ platform_names.get(d.platform, d.platform) }}]
+      {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+<script>
+function jumpTo(id){
+  var el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+</script>
+</body></html>
