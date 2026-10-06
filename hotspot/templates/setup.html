@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>设置密码 - 热点收集器</title>
+<style>
+  :root{--bg:#f4f5fb;--card:#fff;--ink:#1a1c2e;--ink-soft:#6b6f8a;--ink-faint:#a0a3bd;
+        --primary:#5b5bd6;--primary-deep:#4747b0;--line:#ececf4;--radius:14px;}
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC",sans-serif;
+       background:var(--bg);color:var(--ink);margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:var(--card);border-radius:20px;box-shadow:0 8px 40px rgba(40,42,80,.12);padding:36px 34px;max-width:420px;width:100%;}
+  h1{font-size:22px;font-weight:800;margin:0 0 6px;}
+  .sub{font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:22px;}
+  label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin:14px 0 6px;}
+  input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--radius);font-size:15px;font-family:inherit;}
+  input:focus{outline:none;border-color:var(--primary);}
+  button{width:100%;margin-top:22px;padding:13px;border:none;border-radius:100px;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;}
+  button:hover{background:var(--primary-deep);}
+  .warn{margin-top:18px;font-size:12px;color:#b45309;background:#fff7e6;padding:12px 14px;border-radius:10px;line-height:1.7;}
+  .err{color:#e5484d;font-size:13px;margin-top:12px;min-height:18px;font-weight:600;}
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>🔒 首次使用，设置密码</h1>
+    <div class="sub">给软件设一个密码。以后每次打开都要输这个密码才能进，这样你把软件分享给别人，别人没有密码就看不到你的数据和账号。</div>
+    <label>设置密码（至少4位）</label>
+    <input type="password" id="p1" placeholder="输入密码" autofocus>
+    <label>再输一遍确认</label>
+    <input type="password" id="p2" placeholder="再输一遍" onkeydown="if(event.key==='Enter')submit()">
+    <div class="err" id="err"></div>
+    <button onclick="submit()">设置密码并进入</button>
+    <div class="warn">⚠️ 请记牢这个密码，软件<b>不提供找回</b>。忘了只能删掉 data 文件夹里的数据库重新开始（数据也会丢）。</div>
+  </div>
+<script>
+  function submit(){
+    var p1=document.getElementById('p1').value;
+    var p2=document.getElementById('p2').value;
+    var err=document.getElementById('err');
+    err.textContent='';
+    fetch('/setup',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:p1,password2:p2})})
+      .then(r=>r.json()).then(d=>{
+        if(d.ok){ window.location='/'; }
+        else{ err.textContent=d.msg; }
+      });
+  }
+</script>
+</body>
+</html>
