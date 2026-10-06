@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>热点收集器</title>
+<style>
+  :root {
+    --bg: #f4f5fb;
+    --card: #ffffff;
+    --ink: #1a1c2e;
+    --ink-soft: #6b6f8a;
+    --ink-faint: #a0a3bd;
+    --primary: #5b5bd6;
+    --primary-deep: #4747b0;
+    --primary-soft: #eeeefb;
+    --accent: #ff7a59;
+    --line: #ececf4;
+    --weibo: #e6162d; --bilibili: #00a1d6; --zhihu: #0066ff; --xiaohongshu: #ff2442; --douyin:#161823; --other:#8a8fa8;
+    --radius-lg: 20px; --radius: 14px; --radius-sm: 9px;
+    --shadow: 0 4px 20px rgba(40,42,80,0.06);
+    --shadow-hover: 0 8px 30px rgba(40,42,80,0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", "PingFang SC", sans-serif;
+    max-width: 1180px; margin: 0 auto; padding: 28px 22px 60px;
+    color: var(--ink); background: var(--bg);
+    line-height: 1.6;
+  }
+  h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin: 0 0 20px; display:flex; align-items:center; gap:14px; }
+  .link-analysis {
+    font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none;
+    background: #fff4f0; padding: 6px 14px; border-radius: 100px; transition: all .2s;
+  }
+  .link-analysis:hover { background: var(--accent); color: #fff; }
+
+  /* 通用卡片 */
+  .panel {
+    background: var(--card); border-radius: var(--radius-lg);
+    padding: 20px 22px; margin-bottom: 18px; box-shadow: var(--shadow);
+  }
+  .panel-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; display:flex; align-items:center; gap:8px; }
+
+  /* 数据总览 */
+  .overview { background: linear-gradient(135deg, #ffffff 0%, #f7f8ff 100%); }
+  .big-stats { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .stat-pill {
+    background: var(--primary-soft); border-radius: var(--radius);
+    padding: 14px 22px; min-width: 110px;
+  }
+  .stat-pill .num { font-size: 30px; font-weight: 800; color: var(--primary-deep); line-height: 1.1; }
+  .stat-pill .lbl { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .stat-pill.accent { background: #fff0eb; } .stat-pill.accent .num { color: var(--accent); }
+
+  .bar-row { display:flex; align-items:center; gap:10px; margin:5px 0; font-size:12.5px; }
+  .bar-row .name { width:56px; text-align:right; color:var(--ink-soft); font-weight:600; }
+  .bar-track { flex:1; background:#eceef7; border-radius:100px; height:18px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:100px; transition:width .5s cubic-bezier(.2,.8,.2,1); }
+  .bar-row .val { width:46px; font-weight:700; color:var(--ink); }
+
+  .mini-grid { display:flex; gap:18px; flex-wrap:wrap; }
+  .mini-col { flex:1; min-width:210px; }
+  .mini-col .sub { font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:7px; }
+  .mini-item { display:flex; justify-content:space-between; font-size:12.5px; padding:5px 11px; background:var(--bg); border-radius:var(--radius-sm); margin:3px 0; }
+  .mini-item .c { font-weight:700; }
+
+  /* 登录卡片 */
+  .cred-panel { display:flex; gap:12px; flex-wrap:wrap; }
+  .cred-card {
+    flex:1; min-width:158px; padding:15px 16px; background:var(--card);
+    border-radius:var(--radius); border:1px solid var(--line); transition:all .2s;
+  }
+  .cred-card:hover { box-shadow:var(--shadow); transform:translateY(-1px); }
+  .cred-name { font-weight:700; font-size:14.5px; margin-bottom:5px; }
+  .cred-status { font-size:12px; margin-bottom:10px; font-weight:600; }
+  .status-有效 { color:#22a06b; } .status-未登录 { color:var(--ink-faint); }
+  .status-已过期 { color:#e5484d; } .status-登录中 { color:#f5a623; }
+  .cred-btns { display:flex; gap:6px; flex-wrap:wrap; }
+  button {
+    font-family:inherit; padding:7px 14px; border:none; border-radius:100px;
+    cursor:pointer; font-size:12.5px; font-weight:600; transition:all .18s; color:#fff;
+    background:var(--ink);
+  }
+  button:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.15); }
+  .btn-login { background:var(--primary); } .btn-read { background:#22a06b; } .btn-fetch { background:#eceef7; color:var(--ink); }
+  .btn-logout { background:#fff; color:#e5484d; border:1px solid #ffd6d6; }
+  .btn-logout:hover { background:#e5484d; color:#fff; }
+
+  input, select {
+    font-family:inherit; padding:9px 13px; border:1.5px solid var(--line);
+    border-radius:var(--radius-sm); font-size:13.5px; background:var(--card); color:var(--ink); transition:border .2s;
+  }
+  input:focus, select:focus { outline:none; border-color:var(--primary); }
+  input::placeholder { color:var(--ink-faint); }
+
+  .filter { display:flex; gap:9px; flex-wrap:wrap; align-items:center; }
+  .btn-export { background:#22a06b; text-decoration:none; padding:9px 16px; border-radius:100px; color:#fff; font-size:13px; font-weight:600; }
+
+  .view-tabs { display:flex; gap:8px; align-items:center; margin:18px 0; }
+  .view-tab {
+    padding:9px 20px; background:var(--card); border-radius:100px; cursor:pointer;
+    font-size:13.5px; font-weight:600; color:var(--ink-soft); box-shadow:var(--shadow); transition:all .2s;
+  }
+  .view-tab.active { background:var(--ink); color:#fff; }
+
+  /* 数据条目 */
+  .item {
+    padding:13px 16px; margin-bottom:9px; border-radius:var(--radius); display:flex;
+    align-items:center; gap:9px; background:var(--card); box-shadow:var(--shadow); transition:all .18s;
+  }
+  .item:hover { box-shadow:var(--shadow-hover); transform:translateX(2px); }
+  .item.platform-weibo { border-left:3px solid var(--weibo); }
+  .item.platform-bilibili { border-left:3px solid var(--bilibili); }
+  .item.platform-zhihu { border-left:3px solid var(--zhihu); }
+  .item.platform-xiaohongshu { border-left:3px solid var(--xiaohongshu); }
+  .item.platform-douyin { border-left:3px solid var(--douyin); }
+  .item.platform-other { border-left:3px solid var(--other); }
+  .platform-badge { display:inline-block; padding:2px 9px; border-radius:100px; font-size:11px; color:#fff; font-weight:600; white-space:nowrap; }
+  .badge-weibo{background:var(--weibo);} .badge-bilibili{background:var(--bilibili);} .badge-zhihu{background:var(--zhihu);} .badge-xiaohongshu{background:var(--xiaohongshu);} .badge-douyin{background:var(--douyin);} .badge-other{background:var(--other);}
+  .cate-tag { display:inline-block; padding:2px 8px; border-radius:100px; font-size:10.5px; background:var(--primary-soft); color:var(--primary-deep); font-weight:600; }
+  .item-title { flex:1; font-size:14px; }
+  .item-title a { color:var(--ink); text-decoration:none; }
+  .item-title a:hover { color:var(--primary); }
+  .tag { display:inline-block; padding:1px 8px; border-radius:100px; font-size:10.5px; margin-left:4px; font-weight:600; }
+  .tag-重点关注{background:#ffe0e0;color:#c62828;} .tag-需求类{background:#ffedd5;color:#b45309;}
+  .tag-话题类{background:#dbeafe;color:#1e5eb8;} .tag-教育考证{background:#d1fae5;color:#047857;} .tag-效率工具{background:#ede9fe;color:#6d28d9;}
+  .tag-dup{background:#f0f0f4;color:#8a8fa8;}
+  .item.is-dup{opacity:0.55;}
+  .seen { color:var(--ink-faint); font-weight:700; font-size:12px; white-space:nowrap; }
+  .trend-up{color:var(--weibo);} .trend-down{color:#22a06b;} .trend-new{color:var(--accent);font-size:11px;font-weight:700;}
+
+  .batch-header {
+    display:flex; align-items:center; gap:12px; margin:22px 0 10px; padding:10px 16px;
+    background:linear-gradient(135deg,#eeeefb 0%,#f7f8ff 100%); border-radius:var(--radius);
+    border-left:4px solid var(--primary);
+  }
+  .batch-header:first-of-type { margin-top:6px; }
+  .batch-time { font-size:15px; font-weight:800; color:var(--primary-deep); }
+  /* 按平台给批次标题上不同颜色，一眼分清微博/抖音/小红书 */
+  .bh-weibo { background:linear-gradient(135deg,#fde8ea 0%,#fff5f6 100%); border-left-color:var(--weibo); }
+  .bh-weibo .batch-time { color:var(--weibo); }
+  .bh-bilibili { background:linear-gradient(135deg,#e0f4fb 0%,#f5fcff 100%); border-left-color:var(--bilibili); }
+  .bh-bilibili .batch-time { color:#0089b8; }
+  .bh-zhihu { background:linear-gradient(135deg,#e3edff 0%,#f5f9ff 100%); border-left-color:var(--zhihu); }
+  .bh-zhihu .batch-time { color:var(--zhihu); }
+  .bh-xiaohongshu { background:linear-gradient(135deg,#ffe4ea 0%,#fff5f8 100%); border-left-color:var(--xiaohongshu); }
+  .bh-xiaohongshu .batch-time { color:var(--xiaohongshu); }
+  .bh-douyin { background:linear-gradient(135deg,#e8e9ec 0%,#f7f7f9 100%); border-left-color:var(--douyin); }
+  .bh-douyin .batch-time { color:var(--douyin); }
+  .batch-note { font-size:12px; color:var(--ink-soft); }
+  .batch-del { margin-left:auto; font-size:12px; color:#e5484d; text-decoration:none; font-weight:600; }
+  .batch-del:hover { text-decoration:underline; }
+  .section { margin-bottom:22px; }
+  .section-header { font-size:15px; font-weight:700; padding:8px 0; margin-bottom:10px; border-bottom:2px solid var(--line); }
+  .section-count { color:var(--ink-faint); font-weight:500; font-size:12.5px; }
+  .empty { color:var(--ink-faint); padding:40px; text-align:center; background:var(--card); border-radius:var(--radius-lg); box-shadow:var(--shadow); }
+  .watch-note { font-size:12px; color:var(--ink-soft); margin-bottom:10px; }
+  .login-tip { font-size:12.5px; color:var(--ink-soft); line-height:1.7; }
+  .logs { margin-top:32px; font-size:12px; color:var(--ink-soft); }
+  .logs table { width:100%; border-collapse:collapse; background:var(--card); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+  .logs th, .logs td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); }
+  .logs th { background:var(--primary-soft); font-weight:700; color:var(--ink); }
+  .log-fail { color:#e5484d; }
+
+  /* 进度框 */
+  #progressBox { background:var(--card); border-radius:var(--radius); border:2px solid #22a06b; }
+  #progressFill { background:linear-gradient(90deg,#22a06b,#4ade80); }
+
+  @media (max-width:600px){ body{padding:16px 12px;} h1{font-size:21px;} .stat-pill{min-width:88px;padding:11px 14px;} .stat-pill .num{font-size:24px;} }
+</style>
+</head>
+<body>
+  <h1>热点收集器 <a href="/analysis" class="link-analysis">📊 数据分析</a>
+    <a href="javascript:void(0)" class="link-analysis" onclick="forceRefresh()" style="background:#eef2ff;">🔄 强制刷新</a>
+    <a href="javascript:void(0)" class="link-analysis" onclick="pruneOld()" style="background:#fff7e6;color:#b45309;">🧹 立即清理旧数据</a>
+    <a href="javascript:void(0)" class="link-analysis" onclick="clearAllData()" style="background:#fff0eb;color:#e5484d;">🗑️ 清空所有数据</a>
+    <a href="javascript:void(0)" class="link-analysis" onclick="changePwd()" style="background:#f0f0f4;color:#6b6f8a;">🔑 修改密码</a>
+    <a href="javascript:void(0)" class="link-analysis" onclick="appLogout()" style="background:#eef2ff;color:#4747b0;">🚪 退出软件</a>
+  </h1>
+
+  <!-- 数据总览面板 -->
+  <div class="panel overview">
+    <div class="big-stats">
+      <div class="stat-pill"><div class="num">{{ stats.total }}</div><div class="lbl">总条数</div></div>
+      <div class="stat-pill accent"><div class="num">+{{ stats.today_new }}</div><div class="lbl">今日新增</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-soft);margin:-6px 0 14px;padding:10px 14px;background:#fff7e6;border-radius:10px;">
+      <span>🧹 <b>数据保留天数：</b>只保留最近</span>
+      <input type="number" id="keepDaysInput" value="{{ keep_days }}" min="1" max="365"
+             style="width:64px;padding:5px 8px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;text-align:center;">
+      <span>天，更早的自动删除。</span>
+      <button onclick="setKeepDays(document.getElementById('keepDaysInput').value)"
+              style="background:#b45309;color:#fff;padding:5px 12px;font-size:12px;">保存</button>
+      <span style="color:var(--ink-faint);">快捷：</span>
+      <button onclick="setKeepDays(3)" style="background:#f0f0f4;color:#6b6f8a;padding:4px 10px;font-size:12px;">3天</button>
+      <button onclick="setKeepDays(5)" style="background:#f0f0f4;color:#6b6f8a;padding:4px 10px;font-size:12px;">5天</button>
+      <button onclick="setKeepDays(7)" style="background:#f0f0f4;color:#6b6f8a;padding:4px 10px;font-size:12px;">7天</button>
+      <button onclick="setKeepDays(30)" style="background:#f0f0f4;color:#6b6f8a;padding:4px 10px;font-size:12px;">30天</button>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div class="panel-title">📊 各平台</div>
+      {% set platform_colors = {'weibo':'#e6162d','bilibili':'#00a1d6','zhihu':'#0066ff','xiaohongshu':'#ff2442','douyin':'#161823','other':'#8a8fa8'} %}
+      {% set max_p = stats.by_platform.values()|list|max if stats.by_platform else 1 %}
+      {% for p, c in stats.by_platform.items() %}
+      <div class="bar-row">
+        <span class="name">{{ platform_names.get(p, p) }}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:{{ (c/max_p*100)|round }}%;background:{{ platform_colors.get(p,'#8a8fa8') }};"></div></div>
+        <span class="val">{{ c }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mini-grid">
+      <div class="mini-col">
+        <div class="sub">🏷️ 各榜单</div>
+        {% for cat, c in stats.by_category.items() %}{% if loop.index <= 8 %}
+        <div class="mini-item"><span>{{ cat }}</span><span class="c">{{ c }}</span></div>
+        {% endif %}{% endfor %}
+      </div>
+      <div class="mini-col">
+        <div class="sub">🎯 各标签</div>
+        {% for tag, c in stats.by_tag.items() %}{% if loop.index <= 8 %}
+        <div class="mini-item"><span class="tag tag-{{ tag }}" style="margin:0;">{{ tag }}</span><span class="c">{{ c }}</span></div>
+        {% endif %}{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+  <div class="login-tip">
+    💡 <b>登录步骤（重要）</b>：点【登录】→ 软件会<b>专门弹出一个浏览器窗口</b> → <b>必须在这个弹出的窗口里</b>登录（不是你平时的浏览器！）→ 保持这个窗口开着，回来点【完成】。<br>
+    ⚠️ 如果点完成提示"读不到浏览器"或"连接失败"，是因为那个弹出的窗口被关了——重新点【登录】即可。这个窗口会记住登录，之后不用每次重登。
+  </div>
+
+  <div style="background:#e8f5e9;padding:14px;border-radius:8px;margin-bottom:16px;">
+    <b>🌐 抓取网页（微博/知乎/小红书/B站自动归类，其他网站请填备注当分类）</b>
+
+    <div style="margin-top:12px;padding:12px;background:#fff9c4;border-radius:6px;">
+      <b>📖 抓取步骤（按顺序操作）：</b>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="urlInput" placeholder="第1步：粘贴网址" style="flex:2;min-width:260px;">
+        <input type="text" id="noteInput" placeholder="备注/分类名（其他网站填）" style="flex:1;min-width:150px;">
+        <button style="background:#1565c0;font-size:14px;padding:8px 18px;" onclick="openUrl()">① 打开网址</button>
+      </div>
+      <div style="margin-top:8px;color:#a35200;font-size:13px;">
+        ② 在打开的页面里，<b>往下拉</b>到你需要的位置（拉得越多，抓得越全）
+      </div>
+      <div style="margin-top:8px;">
+        <button style="background:#2e7d32;font-size:15px;padding:10px 24px;font-weight:bold;" onclick="fetchCurrentWithNote()">③ 抓取（抓我刚拉好的页面）</button>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button style="background:#00897b;font-size:12px;padding:5px 12px;" onclick="saveUrl()">把这个网址存入常用</button>
+      <button style="background:#e6162d;font-size:12px;padding:5px 12px;" onclick="presetWeibo()">➕ 一键预置微博各榜单</button>
+    </div>
+
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #c8e6c9;">
+      <b style="font-size:13px;">⚡ 快捷抓榜单（点一下自动打开+抓+分类，适合不用拉的榜单）：</b>
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button style="background:#0066ff;font-size:12px;padding:5px 12px;" onclick="quickFetch('https://www.zhihu.com/hot','知乎-热榜')">知乎热榜</button>
+        <button style="background:#0066ff;font-size:12px;padding:5px 12px;" onclick="quickFetch('https://www.zhihu.com/','知乎-大家都在搜')">知乎大家都在搜</button>
+        <button style="background:#e6162d;font-size:12px;padding:5px 12px;" onclick="quickFetch('https://s.weibo.com/top/summary?cate=realtimehot','微博-热搜')">微博热搜</button>
+        <button style="background:#e6162d;font-size:12px;padding:5px 12px;" onclick="quickFetch('https://s.weibo.com/top/summary?cate=entrank','微博-文娱')">微博文娱</button>
+        <button style="background:#e6162d;font-size:12px;padding:5px 12px;" onclick="quickFetch('https://s.weibo.com/top/summary?cate=socialevent','微博-要闻')">微博要闻</button>
+      </div>
+    </div>
+
+    <div id="progressBox" style="display:none;margin-top:10px;padding:10px;background:#fff;border-radius:6px;border:1px solid #4caf50;">
+      <div id="progressText" style="font-weight:bold;color:#2e7d32;">抓取中...</div>
+      <div id="progressBar" style="height:6px;background:#e0e0e0;border-radius:3px;margin:8px 0;overflow:hidden;">
+        <div id="progressFill" style="height:100%;width:0%;background:#4caf50;transition:width 0.3s;"></div>
+      </div>
+      <div id="progressResults" style="font-size:12px;color:#555;max-height:120px;overflow-y:auto;"></div>
+    </div>
+
+    {% if saved_urls %}
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #c8e6c9;">
+      <b style="font-size:13px;">📌 常用网址（{{ saved_urls|length }}个）</b>
+      <button style="background:#2e7d32;font-size:12px;padding:4px 10px;margin-left:8px;" onclick="fetchAllSaved()">⚡ 一键全抓</button>
+      <div style="margin-top:6px;">
+        {% for u in saved_urls %}
+        <div style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 0;">
+          <span style="background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #ddd;">{{ u.note or '未备注' }}</span>
+          <span style="color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ u.url }}</span>
+          <button style="background:#eee;color:#c00;padding:2px 8px;font-size:11px;" onclick="delUrl({{ u.id }})">删</button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="panel-title" style="margin-top:16px;">🔑 平台登录</div>
+  <div class="cred-panel">
+    {% for c in cred_panel %}
+    <div class="cred-card">
+      <div class="cred-name">{{ c.name }}</div>
+      <div class="cred-status status-{{ c.status }}">● {{ c.status }}</div>
+      <div class="cred-btns">
+        <button class="btn-login" onclick="doLogin('{{ c.platform }}')">登录</button>
+        <button class="btn-read" onclick="readCookie('{{ c.platform }}')">完成</button>
+        {% if c.platform == 'xiaohongshu' %}
+        <button class="btn-fetch" onclick="alert('小红书请用上面的地址栏抓取：在浏览器打开小红书频道，把网址粘进地址栏点抓取，或直接点【抓取浏览器当前已打开的页面】')">抓取</button>
+        {% else %}
+        <button class="btn-fetch" onclick="doFetch('{{ c.platform }}')">抓取</button>
+        {% endif %}
+        <button class="btn-logout" onclick="doLogout('{{ c.platform }}')">退出</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  </div>
+
+  <form class="panel filter" method="get" id="filterbar" onsubmit="rememberScroll()">
+    <input type="hidden" name="view" value="{{ view }}">
+    <select name="platform" onchange="rememberScroll();this.form.submit()">
+      <option value="">全部平台</option>
+      {% for pval, pname in platform_options %}
+      <option value="{{ pval }}" {% if filters.platform == pval %}selected{% endif %}>{{ pname }}</option>
+      {% endfor %}
+    </select>
+    <select name="category" onchange="rememberScroll();this.form.submit()">
+      <option value="">全部榜单</option>
+      {% for cat in categories %}
+      <option value="{{ cat }}" {% if filters.category == cat %}selected{% endif %}>{{ cat }}</option>
+      {% endfor %}
+    </select>
+    <select name="tag">
+      <option value="">全部标签</option>
+      <option value="重点关注" {% if filters.tag == '重点关注' %}selected{% endif %}>重点关注</option>
+      <option value="需求类" {% if filters.tag == '需求类' %}selected{% endif %}>需求类</option>
+      <option value="话题类" {% if filters.tag == '话题类' %}selected{% endif %}>话题类</option>
+      <option value="教育考证" {% if filters.tag == '教育考证' %}selected{% endif %}>教育考证</option>
+      <option value="效率工具" {% if filters.tag == '效率工具' %}selected{% endif %}>效率工具</option>
+      {% for ct in custom_tags %}
+      <option value="{{ ct.tag_name }}" {% if filters.tag == ct.tag_name %}selected{% endif %}>{{ ct.tag_name }}</option>
+      {% endfor %}
+    </select>
+    <select name="days" onchange="rememberScroll();this.form.submit()">
+      <option value="">全部时间</option>
+      <option value="today" {% if filters.days == 'today' or filters.days == '1' %}selected{% endif %}>今日</option>
+      <option value="yesterday" {% if filters.days == 'yesterday' %}selected{% endif %}>昨日</option>
+      <option value="3days" {% if filters.days == '3days' %}selected{% endif %}>最近三天</option>
+      <option value="5days" {% if filters.days == '5days' %}selected{% endif %}>最近五天</option>
+      <option value="7days" {% if filters.days == '7days' or filters.days == '7' %}selected{% endif %}>最近7天（本周）</option>
+    </select>
+    <select name="batch" onchange="rememberScroll();this.form.submit()">
+      <option value="">全部收集批次</option>
+      {% for b in batches %}
+      <option value="{{ b.id }}" {% if filters.batch == b.id|string %}selected{% endif %}>🕐 {{ b.label }}（{{ b.item_count }}条）</option>
+      {% endfor %}
+    </select>
+    <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink-soft);cursor:pointer;white-space:nowrap;">
+      <input type="checkbox" name="hide_dup" value="1" {% if filters.hide_dup == '1' %}checked{% endif %}
+             onchange="rememberScroll();this.form.submit()" style="cursor:pointer;">
+      隐藏和上次重复的
+    </label>
+    <select name="sort" onchange="rememberScroll();this.form.submit()">
+      <option value="default" {% if filters.sort == 'default' %}selected{% endif %}>默认排序</option>
+      <option value="heat" {% if filters.sort == 'heat' %}selected{% endif %}>按热度/播放量</option>
+      <option value="likes" {% if filters.sort == 'likes' %}selected{% endif %}>按点赞</option>
+      <option value="pub_new" {% if filters.sort == 'pub_new' %}selected{% endif %}>最新发布</option>
+      <option value="rank" {% if filters.sort == 'rank' %}selected{% endif %}>按榜单排名</option>
+      <option value="cross" {% if filters.sort == 'cross' %}selected{% endif %}>多平台上榜优先</option>
+    </select>
+    <input type="text" name="keyword" placeholder="关键词搜索..." value="{{ filters.keyword }}">
+    <button type="submit">筛选</button>
+    <button type="submit" class="btn-export" formaction="/export" formmethod="get">📥 导出Excel（按当前筛选）</button>
+  </form>
+
+  <div class="watch-note">🎯 监控词：{{ watch_keywords|join('、') }}（命中标"重点关注"）</div>
+
+  <div class="panel" style="margin-bottom:14px;">
+    <b style="font-size:13px;">🏷️ 我的自定义标签（设一组关键词，以后新抓到的内容命中就自动打上这个标签，可在上面筛选）</b>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+      <input id="ctName" type="text" placeholder="标签名，如：新能源汽车" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;width:180px;">
+      <input id="ctKw" type="text" placeholder="关键词，逗号隔开：比亚迪,充电桩,续航,电池" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;flex:1;min-width:240px;">
+      <button style="background:#5b5bd6;color:#fff;border:0;font-size:13px;padding:7px 14px;border-radius:8px;cursor:pointer;" onclick="addCustomTag()">添加标签</button>
+    </div>
+    {% if custom_tags %}
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+      {% for ct in custom_tags %}
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line);">
+        <span style="background:#eeeefb;color:#4747b0;font-weight:600;padding:2px 10px;border-radius:100px;white-space:nowrap;">{{ ct.tag_name }}</span>
+        <span style="color:var(--ink-soft);flex:1;">{{ ct.keywords }}</span>
+        <span style="color:#e6162d;cursor:pointer;font-size:12px;" onclick="deleteCustomTag({{ ct.id }})">删</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="margin-top:8px;font-size:12px;color:var(--ink-faint);">还没有自定义标签。上面填个标签名和一组关键词，点"添加标签"就行。</div>
+    {% endif %}
+  </div>
+
+  <div class="view-tabs">
+    <div class="view-tab {% if view == 'list' %}active{% endif %}" onclick="switchView('list')">📋 大列表</div>
+    <div class="view-tab {% if view == 'section' %}active{% endif %}" onclick="switchView('section')">📂 按标签分板块</div>
+    <a href="/filter_words" class="link-analysis" style="margin-left:auto;">🚫 过滤词库管理</a>
+  </div>
+
+  <div id="batchBar" style="display:none;align-items:center;gap:10px;padding:10px 14px;margin-bottom:10px;background:#fff5f5;border:1px solid #ffd6d6;border-radius:10px;font-size:13px;">
+    <span>已选 <b id="selCount">0</b> 条</span>
+    <button onclick="batchDelete(false)" style="background:#8a8fa8;color:#fff;border:0;padding:6px 12px;border-radius:8px;cursor:pointer;">仅删除</button>
+    <button onclick="batchDelete(true)" style="background:#e6162d;color:#fff;border:0;padding:6px 12px;border-radius:8px;cursor:pointer;">删除并加入过滤库</button>
+    <span style="color:#999;">（加入过滤库=以后不再抓取相同标题）</span>
+    <a href="javascript:void(0)" onclick="clearSel()" style="margin-left:auto;color:#5b5bd6;">取消选择</a>
+  </div>
+
+  {% macro render_item(item) %}
+    <div class="item platform-{{ item.platform }}{% if item.is_duplicate %} is-dup{% endif %}">
+      <input type="checkbox" class="item-check" value="{{ item.id }}" onchange="updateSelCount()" style="margin-right:8px;cursor:pointer;flex:0 0 auto;">
+      <span class="platform-badge badge-{{ item.platform }}">{{ platform_names.get(item.platform, item.platform) }}</span>
+      {% if item.category %}<span class="cate-tag">{{ item.category }}</span>{% endif %}
+      <span class="item-title">
+        <a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+        {% if item.is_duplicate %}<span class="tag tag-dup" title="上一次收集里也出现过">🔁 上次也有</span>{% endif %}
+        {% for t in (item.tags or '').split(',') if t %}<span class="tag tag-{{ t }}">{{ t }}</span>{% endfor %}
+      </span>
+      <span class="trend-{{ item.trend }}">{% if item.trend == 'up' %}↑{% elif item.trend == 'down' %}↓{% elif item.trend == 'new' %}新{% endif %}</span>
+      {% if item.heat and item.heat > 0 %}<span style="font-size:11px;color:#e6162d;white-space:nowrap;">🔥{{ '{:,}'.format(item.heat) }}</span>{% endif %}
+      {% if item.likes and item.likes > 0 %}<span style="font-size:11px;color:#ff6d00;white-space:nowrap;">👍{{ '{:,}'.format(item.likes) }}</span>{% endif %}
+      {% if item.pub_time %}<span style="font-size:11px;color:#999;white-space:nowrap;">🕐{{ item.pub_time }}</span>{% endif %}
+      <span class="seen">×{{ item.seen_count }}</span>
+    </div>
+  {% endmacro %}
+
+  {% if not items %}
+    <div class="empty">还没有数据。先点平台【登录】(需登录的)，再点【抓取】，或运行 scheduler.py</div>
+  {% elif view == 'list' %}
+    {# 按收集批次分组：每次收集分开显示，标注收集时间 #}
+    {% set ns = namespace(cur=None) %}
+    {% for item in items %}
+      {% if item.batch_id != ns.cur %}
+        {% set ns.cur = item.batch_id %}
+        <div class="batch-header bh-{{ item.platform }}">
+          <span class="batch-time">🕐 {{ item.batch_label or '未分批' }}</span>
+          <span class="batch-note">这次收集的内容</span>
+          {% if item.batch_id %}
+          <a href="javascript:void(0)" class="batch-del" onclick="deleteBatch({{ item.batch_id }})">删除这次收集</a>
+          {% endif %}
+        </div>
+      {% endif %}
+      {{ render_item(item) }}
+    {% endfor %}
+  {% else %}
+    {% for tag_name, tag_items in grouped.items() %}
+      {% if tag_items %}
+      <div class="section">
+        <div class="section-header">{{ tag_name }} <span class="section-count">（{{ tag_items|length }} 条）</span></div>
+        {% for item in tag_items %}{{ render_item(item) }}{% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  <div class="logs">
+    <strong>最近抓取记录</strong>（<a href="/view_log" target="_blank" style="color:#1565c0;">点这里看完整日志</a>，出问题时把日志内容发出来）
+    <table>
+      <tr><th>平台</th><th>时间</th><th>状态</th><th>条数</th><th>错误</th></tr>
+      {% for log in logs %}
+      <tr class="{% if log.status == 'fail' %}log-fail{% endif %}">
+        <td>{{ platform_names.get(log.platform, log.platform) }}</td><td>{{ log.run_time }}</td><td>{{ log.status }}</td><td>{{ log.item_count }}</td><td>{{ log.error_msg }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+<script>
+  // 筛选后不跳回顶部：提交前记住当前滚动位置，页面重载后恢复到筛选栏位置
+  function rememberScroll(){
+    try { sessionStorage.setItem('hotspot_scroll', String(window.scrollY || 0)); } catch(e){}
+  }
+  window.addEventListener('DOMContentLoaded', function(){
+    try {
+      var y = sessionStorage.getItem('hotspot_scroll');
+      if(y !== null){
+        sessionStorage.removeItem('hotspot_scroll');
+        var bar = document.getElementById('filterbar');
+        if(bar){ bar.scrollIntoView({block:'start'}); }
+        else { window.scrollTo(0, parseInt(y,10) || 0); }
+      }
+    } catch(e){}
+  });
+  function selectedIds(){
+    return Array.from(document.querySelectorAll('.item-check:checked')).map(c=>parseInt(c.value,10));
+  }
+  function updateSelCount(){
+    var n = selectedIds().length;
+    document.getElementById('selCount').textContent = n;
+    document.getElementById('batchBar').style.display = n>0 ? 'flex' : 'none';
+  }
+  function clearSel(){
+    document.querySelectorAll('.item-check:checked').forEach(c=>c.checked=false);
+    updateSelCount();
+  }
+  function batchDelete(block){
+    var ids = selectedIds();
+    if(!ids.length){alert('请先勾选内容');return;}
+    var tip = block ? ('确定删除这'+ids.length+'条，并把它们的标题加入过滤库（以后不再抓取）？') : ('确定删除这'+ids.length+'条？');
+    if(!confirm(tip))return;
+    fetch('/items/batch_delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:ids,block:block})})
+      .then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function forceRefresh(){
+    // 加时间戳参数绕过缓存，强制从服务器拿最新页面
+    var u = new URL(window.location);
+    u.searchParams.set('_', Date.now());
+    window.location = u.toString();
+  }
+  function switchView(v){ var u=new URL(window.location); u.searchParams.set('view',v); window.location=u; }
+  function doLogin(p){ fetch('/login/'+p,{method:'POST'}).then(r=>r.json()).then(d=>alert(d.msg)); }
+  function readCookie(p){ fetch('/read_cookie/'+p,{method:'POST'}).then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();}); }
+  function doFetch(p){ fetch('/fetch/'+p,{method:'POST'}).then(r=>r.json()).then(d=>{ startPolling(); }); }
+  function doLogout(p){
+    if(!confirm('确定退出这个平台的登录吗？\n退出后别人用这台电脑打开该平台不会自动是你的账号，下次要重新登录。'))return;
+    fetch('/logout/'+p,{method:'POST'}).then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function clearAllData(){
+    if(!confirm('确定清空所有收集到的热点数据吗？\n（登录状态、过滤词库、常用网址、自定义标签都会保留，只删热点数据）'))return;
+    if(!confirm('再确认一次：这会删掉全部历史收集记录，删了找不回来。确定继续？'))return;
+    fetch('/clear_all',{method:'POST'}).then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function pruneOld(){
+    if(!confirm('现在立即清理超过保留天数的旧数据？（登录和设置不动）'))return;
+    fetch('/prune_old',{method:'POST'}).then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function setKeepDays(days){
+    days=parseInt(days,10);
+    if(!days||days<1||days>365){alert('请输入1到365之间的天数');return;}
+    if(!confirm('设为只保留最近'+days+'天？现在会立即删掉超过'+days+'天的旧数据。'))return;
+    fetch('/set_keep_days',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:days})})
+      .then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function appLogout(){
+    if(!confirm('退出软件？退出后需要重新输密码才能进（别人打开也会被挡在密码页外）。'))return;
+    fetch('/app_logout',{method:'POST'}).then(r=>r.json()).then(d=>{ window.location='/login'; });
+  }
+  function changePwd(){
+    var oldp=prompt('请输入当前密码：');
+    if(oldp===null)return;
+    var newp=prompt('请输入新密码（至少4位）：');
+    if(newp===null)return;
+    var newp2=prompt('再输一遍新密码：');
+    if(newp2===null)return;
+    if(newp!==newp2){alert('两次新密码不一样');return;}
+    fetch('/change_password',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({old:oldp,new:newp})})
+      .then(r=>r.json()).then(d=>alert(d.msg));
+  }
+  function deleteBatch(id){
+    if(!confirm('删除这一次收集的全部数据？'))return;
+    fetch('/batch/delete/'+id,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok) location.reload();});
+  }
+  // 进度轮询
+  var pollTimer = null;
+  function startPolling(){
+    document.getElementById('progressBox').style.display='block';
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(function(){
+      fetch('/task_status').then(r=>r.json()).then(s=>{
+        document.getElementById('progressText').innerText = s.text || '抓取中...';
+        var pct = s.total>0 ? Math.round(s.done/s.total*100) : (s.running?50:100);
+        document.getElementById('progressFill').style.width = pct+'%';
+        document.getElementById('progressResults').innerHTML = (s.results||[]).map(x=>'✓ '+x).join('<br>');
+        if(!s.running){
+          clearInterval(pollTimer);
+          document.getElementById('progressText').innerText = '✅ ' + (s.text||'完成');
+          document.getElementById('progressFill').style.width = '100%';
+          // 完成弹窗：显示详细结果
+          var summary = '✅ 抓取完成！\n\n';
+          (s.results||[]).forEach(function(x){ summary += '• ' + x + '\n'; });
+          alert(summary);
+          setTimeout(function(){ location.reload(); }, 800);
+        }
+      });
+    }, 800);
+  }
+
+  function quickFetch(url, note){
+    fetch('/fetch_url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,note:note})})
+      .then(r=>r.json()).then(d=>{ startPolling(); });
+  }
+  function presetWeibo(){
+    fetch('/preset_weibo',{method:'POST'}).then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function openUrl(){
+    var url=document.getElementById('urlInput').value.trim();
+    if(!url){alert('请输入网址');return;}
+    fetch('/open_url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})})
+      .then(r=>r.json()).then(d=>alert(d.msg));
+  }
+  function fetchCurrentWithNote(){
+    var note=document.getElementById('noteInput').value.trim();
+    fetch('/read_pages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:note})})
+      .then(r=>r.json()).then(d=>{ startPolling(); });
+  }
+  function readPages(){
+    fetch('/read_pages',{method:'POST'}).then(r=>r.json()).then(d=>{ startPolling(); });
+  }
+  function fetchUrl(){
+    var url=document.getElementById('urlInput').value.trim();
+    var note=document.getElementById('noteInput').value.trim();
+    if(!url){alert('请输入网址');return;}
+    fetch('/fetch_url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,note:note})})
+      .then(r=>r.json()).then(d=>{ startPolling(); });
+  }
+  function saveUrl(){
+    var url=document.getElementById('urlInput').value.trim();
+    var note=document.getElementById('noteInput').value.trim();
+    if(!url){alert('请输入网址');return;}
+    fetch('/saved_urls/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,note:note})})
+      .then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function delUrl(id){
+    fetch('/saved_urls/delete/'+id,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok) location.reload();});
+  }
+  function fetchAllSaved(){
+    fetch('/fetch_all_saved',{method:'POST'}).then(r=>r.json()).then(d=>{ startPolling(); });
+  }
+  function addCustomTag(){
+    var name=document.getElementById('ctName').value.trim();
+    var kw=document.getElementById('ctKw').value.trim();
+    if(!name||!kw){alert('标签名和关键词都要填');return;}
+    fetch('/custom_tags/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tag_name:name,keywords:kw})})
+      .then(r=>r.json()).then(d=>{alert(d.msg); if(d.ok) location.reload();});
+  }
+  function deleteCustomTag(id){
+    if(!confirm('删除这个自定义标签？（不影响已经打上的历史数据）'))return;
+    fetch('/custom_tags/delete/'+id,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok) location.reload();});
+  }
+</script>
+</body>
+</html>
