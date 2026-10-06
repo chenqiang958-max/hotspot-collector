@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>激活 - 热点收集器</title>
+<style>
+  :root{--bg:#f4f5fb;--card:#fff;--ink:#1a1c2e;--ink-soft:#6b6f8a;--ink-faint:#a0a3bd;
+        --primary:#5b5bd6;--primary-deep:#4747b0;--line:#ececf4;--radius:14px;}
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei","PingFang SC",sans-serif;
+       background:var(--bg);color:var(--ink);margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:var(--card);border-radius:20px;box-shadow:0 8px 40px rgba(40,42,80,.12);padding:36px 34px;max-width:440px;width:100%;}
+  h1{font-size:22px;font-weight:800;margin:0 0 6px;}
+  .sub{font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px;}
+  label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin:14px 0 6px;}
+  input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--radius);font-size:16px;font-family:inherit;letter-spacing:1px;text-align:center;text-transform:uppercase;}
+  input:focus{outline:none;border-color:var(--primary);}
+  button{width:100%;margin-top:20px;padding:13px;border:none;border-radius:100px;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;}
+  button:hover{background:var(--primary-deep);}
+  .err{color:#e5484d;font-size:13px;margin-top:12px;min-height:18px;font-weight:600;}
+  .machine{margin-top:18px;font-size:12px;color:var(--ink-faint);background:var(--bg);padding:12px 14px;border-radius:10px;line-height:1.7;}
+  .machine b{color:var(--ink-soft);font-family:monospace;letter-spacing:1px;}
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>🎫 请输入激活码</h1>
+    <div class="sub">这个软件需要激活码才能使用。请向软件的提供者索取激活码，输入后即可激活本机。一个激活码只能激活一台电脑。</div>
+    <label>激活码</label>
+    <input type="text" id="code" placeholder="XXXX-XXXX-XXXX-XXXX" autofocus onkeydown="if(event.key==='Enter')activate()">
+    <div class="err" id="err"></div>
+    <button onclick="activate()">激活</button>
+    <div class="machine">本机识别码：<b>{{ machine }}</b><br>（如果激活遇到问题，把这串识别码发给软件提供者）</div>
+  </div>
+<script>
+  function activate(){
+    var code=document.getElementById('code').value;
+    var err=document.getElementById('err');
+    err.textContent='';
+    fetch('/activate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code:code})})
+      .then(r=>r.json()).then(d=>{
+        if(d.ok){ window.location='/setup'; }
+        else{ err.textContent=d.msg; }
+      });
+  }
+</script>
+</body>
+</html>
